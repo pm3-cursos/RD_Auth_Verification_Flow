@@ -5,6 +5,8 @@ import psycopg2
 from datetime import date
 from dotenv import load_dotenv
 
+from prefect import flow, task
+
 # Carrega as variáveis de ambiente do arquivo .env
 load_dotenv()
 
@@ -21,6 +23,7 @@ DB_USER = os.getenv("POSTGRES_USER")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 DB_HOST = os.getenv("POSTGRES_HOST")
 
+@task
 def verificar_validade_token(access_token):
     """
     Verifica se o token de acesso é válido.
@@ -36,6 +39,7 @@ def verificar_validade_token(access_token):
     else:
         print(f'Erro na verificação do token. Status code: {response.status_code}')
 
+@task
 def renovar_token():
     """
     Renova o token de acesso usando o refresh token.
@@ -60,6 +64,7 @@ def renovar_token():
     else:
         print(f'Erro na renovação do token. Status code: {response.status_code}')
 
+@task
 def criar_json_data():
     """
     Cria um dicionário JSON com os dados do token e credenciais.
@@ -73,6 +78,7 @@ def criar_json_data():
     }
     return data
 
+@task
 def atualizar_banco_dados(dados):
     """
     Atualiza o banco de dados com os dados do token e credenciais.
@@ -120,14 +126,21 @@ def atualizar_banco_dados(dados):
         if conn:
             conn.close()
 
-# Verifica se o token é válido
-verificar_validade_token(access_token)
+@flow(log_prints=True)
+def validation_flow():
 
-# Gera os dados em formato JSON
-dados_para_upload = criar_json_data()
+    # Verifica se o token é válido
+    verificar_validade_token(access_token)
 
-# Exibe os dados gerados
-print(json.dumps(dados_para_upload, indent=4, default=str))
+    # Gera os dados em formato JSON
+    dados_para_upload = criar_json_data()
 
-# Atualiza o banco de dados
-atualizar_banco_dados(dados_para_upload)
+    # Exibe os dados gerados
+    print(json.dumps(dados_para_upload, indent=4, default=str))
+
+    # Atualiza o banco de dados
+    atualizar_banco_dados(dados_para_upload)
+
+
+if __name__ == "__main__":
+    validation_flow()

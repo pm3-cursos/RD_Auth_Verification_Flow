@@ -1,15 +1,19 @@
 from prefect import flow
+from pathlib import Path
 
-# Source for the code to deploy (here, a GitHub repo)
-SOURCE_REPO="https://github.com/pm3-cursos/RD_Auth_Verification_Flow.git"
+
+@flow(log_prints=True)
+def my_flow(name: str = "World"):
+    print(f"Hello {name}!")
+    print(str(Path(__file__).parent))  # dynamic path
+
 
 if __name__ == "__main__":
-    flow.from_source(
-        source=SOURCE_REPO,
-        entrypoint="token_pipeline.py:validation_flow", # Specific flow to run
+    my_flow.from_source(
+        source=str(Path(__file__).parent),  # code stored in local directory
+        entrypoint="token_pipeline.py:validation_flow",
     ).deploy(
-        name="Validacao RD Station",
-        work_pool_name="principal-work-pool",
-        cron="45 15 * * *",
-        timezone="America/Sao_Paulo"  # Run every hour
+        name="local-rdstation-token-validation-pipeline",
+        work_pool_name="digitalocean-pool",
+        cron='00 03 * * *'
     )
